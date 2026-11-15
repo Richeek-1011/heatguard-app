@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HeatGuard</title>
+  <meta name="theme-color" content="#1D2A2E">
+  <meta name="description" content="Heat risk, vitals and SOS from the HeatGuard band">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <!-- ============ Setup screen ============ -->
+  <main id="pair" class="pair" hidden>
+    <div class="pair-inner">
+      <svg class="pair-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#mark"/></svg>
+      <h1>HeatGuard</h1>
+      <p class="lede">Open the wearer or guardian link to see a band. No link yet? Make both below from your ThingSpeak keys.</p>
+      <p id="pairError" class="error" role="alert" hidden></p>
+
+      <form id="setupForm" class="form" autocomplete="off">
+        <label>Wearer's name <input name="name" required maxlength="40" placeholder="Aaryan"></label>
+
+        <h3>Vitals channel</h3>
+        <div class="grid2">
+          <label>Channel ID <input name="vId" required inputmode="numeric" placeholder="2712345"></label>
+          <label>Read API key <input name="vR" required placeholder="ABCD1234..." spellcheck="false" autocapitalize="off"></label>
+        </div>
+
+        <h3>Events channel</h3>
+        <div class="grid2">
+          <label>Channel ID <input name="eId" required inputmode="numeric"></label>
+          <label>Read API key <input name="eR" required spellcheck="false" autocapitalize="off"></label>
+        </div>
+        <label>Write API key <small>Only goes in the wearer link (SOS from the phone).</small><input name="eW" required spellcheck="false" autocapitalize="off"></label>
+
+        <h3>Phone channel</h3>
+        <div class="grid2">
+          <label>Channel ID <input name="pId" required inputmode="numeric"></label>
+          <label>Read API key <input name="pR" required spellcheck="false" autocapitalize="off"></label>
+        </div>
+        <label>Write API key <small>Only goes in the wearer link (shares the phone's location).</small><input name="pW" required spellcheck="false" autocapitalize="off"></label>
+
+        <h3>TalkBack</h3>
+        <div class="grid2">
+          <label>TalkBack ID <input name="tId" required inputmode="numeric"></label>
+          <label>TalkBack API key <input name="tK" required spellcheck="false" autocapitalize="off"></label>
+        </div>
+
+        <button class="btn primary" type="submit">Make the links</button>
+      </form>
+
+      <section id="links" class="links" hidden>
+        <h2>Your links</h2>
+        <p class="note">Open the wearer link on the phone that runs the hotspot. Send the guardian link to family. Anyone with a link can see the data, so share it only with them.</p>
+        <label>Wearer link <textarea id="wearerLink" readonly rows="3"></textarea></label>
+        <div class="row2">
+          <button class="btn" type="button" data-copy="wearerLink">Copy wearer link</button>
+          <a class="btn primary" id="openWearer" href="#">Open as wearer</a>
+        </div>
+        <label>Guardian link <textarea id="guardianLink" readonly rows="3"></textarea></label>
+        <div class="row2">
+          <button class="btn" type="button" data-copy="guardianLink">Copy guardian link</button>
+          <a class="btn ghost" id="openGuardian" href="#">Open as guardian</a>
+        </div>
+      </section>
+      <p class="fine">HeatGuard is a student project, not a medical device. In an emergency, call 112.</p>
+    </div>
+  </main>
+
+  <!-- ============ Band screen ============ -->
+  <div id="app" hidden>
+    <header class="bar">
+      <div class="who">
+        <strong id="bandName">Band</strong>
+        <span id="roleTag" class="role"></span>
+      </div>
+      <div id="conn" class="conn" aria-live="polite"><span class="dot"></span><span id="connText">Connecting</span></div>
+    </header>
+
+    <section id="risk" class="risk lv-none" aria-live="polite">
+      <div class="risk-inner">
+        <p class="risk-level" id="riskLevel">Waiting for the band</p>
+        <h1 class="risk-say" id="riskSay">No reading yet</h1>
+        <div class="risk-hi">
+          <span class="hi-num" id="hiNum">--</span>
+          <span class="hi-unit">°C heat index</span>
+        </div>
+        <p class="risk-why" id="riskWhy"></p>
+        <p class="risk-air" id="riskAir"></p>
+      </div>
+    </section>
+
+    <section id="emergency" class="emergency" hidden role="alert">
+      <div>
+        <strong id="emTitle">Emergency</strong>
+        <p id="emText"></p>
+        <a id="emMap" class="maplink" target="_blank" rel="noopener" hidden>Open phone location in Maps</a>
+      </div>
+      <button class="btn light" id="emAck" hidden>I've seen this</button>
+    </section>
+
+    <main class="content">
+      <section class="vitals" aria-label="Latest vitals">
+        <div class="vital"><span class="v-label">Skin</span><span class="v-num" id="vSkin">--</span><span class="v-unit">°C</span><span class="v-note" id="vSkinNote">surface, not core</span></div>
+        <div class="vital"><span class="v-label">Heart rate</span><span class="v-num" id="vHr">--</span><span class="v-unit">bpm</span><span class="v-note" id="vHrNote"></span></div>
+        <div class="vital"><span class="v-label">SpO2</span><span class="v-num" id="vSp">--</span><span class="v-unit">%</span><span class="v-note" id="vSpNote"></span></div>
+      </section>
+
+      <!-- wearer actions -->
+      <section id="wearerActions" class="actions" hidden>
+        <button id="sosBtn" class="sos" aria-describedby="sosHelp">
+          <svg class="sos-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46"/></svg>
+          <span class="sos-text">SOS</span>
+        </button>
+        <p id="sosHelp" class="sos-help">Hold for 2 seconds. Sends your location to your guardians.</p>
+        <div class="row2">
+          <button id="okBtn" class="btn">I'm OK</button>
+          <button id="readBtn" class="btn ghost">Take a reading</button>
+        </div>
+        <p id="silenceNote" class="note" hidden></p>
+        <p id="locNote" class="note"></p>
+      </section>
+
+      <!-- guardian actions -->
+      <section id="guardianActions" class="actions" hidden>
+        <div class="row2">
+          <button id="gReadBtn" class="btn">Ask for a reading</button>
+          <button id="findBtn" class="btn ghost">Beep the band</button>
+        </div>
+        <a id="gMap" class="maplink" target="_blank" rel="noopener" hidden>Wearer's phone on the map</a>
+        <p id="gSilenceNote" class="note" hidden></p>
+      </section>
+
+      <section class="panel" aria-labelledby="expTitle">
+        <h2 id="expTitle">Heat exposure today</h2>
+        <div class="expbar" id="expBar" role="img"></div>
+        <p class="exp-legend" id="expLegend"></p>
+        <div class="week" id="week" aria-label="Last 7 days"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="histTitle">
+        <div class="panel-head">
+          <h2 id="histTitle">History</h2>
+          <div class="seg" role="tablist" aria-label="Time range">
+            <button role="tab" data-hours="6" aria-selected="false">6 h</button>
+            <button role="tab" data-hours="24" aria-selected="true">24 h</button>
+          </div>
+        </div>
+        <div class="seg seg-wide" role="tablist" aria-label="Measurement">
+          <button role="tab" data-series="hi" aria-selected="true">Heat index</button>
+          <button role="tab" data-series="sk" aria-selected="false">Skin</button>
+          <button role="tab" data-series="hr" aria-selected="false">Heart rate</button>
+          <button role="tab" data-series="sp" aria-selected="false">SpO2</button>
+        </div>
+        <div id="chart" class="chart"></div>
+        <a id="csvBtn" class="btn ghost small csv" target="_blank" rel="noopener">Download readings (CSV)</a>
+      </section>
+
+      <section class="panel" aria-labelledby="evTitle">
+        <h2 id="evTitle">Alerts</h2>
+        <ul id="events" class="events"></ul>
+        <button id="moreEvents" class="btn link" type="button" hidden></button>
+      </section>
+
+      <section class="panel" id="settingsPanel" aria-labelledby="setTitle">
+        <h2 id="setTitle">Settings</h2>
+        <p class="note" id="setSource"></p>
+        <form id="settingsForm" class="form">
+          <div class="grid2">
+            <label>Heat index amber at <span class="unit-in"><input name="hiA" type="number" step="0.5"> °C</span></label>
+            <label>Heat index red above <span class="unit-in"><input name="hiR" type="number" step="0.5"> °C</span></label>
+            <label>Skin warning <span class="unit-in"><input name="sk" type="number" step="0.1"> °C</span></label>
+            <label>Skin emergency <span class="unit-in"><input name="skE" type="number" step="0.1"> °C</span></label>
+            <label>Resting heart rate above <span class="unit-in"><input name="hr" type="number" step="1"> bpm</span></label>
+            <label>SpO2 below <span class="unit-in"><input name="sp" type="number" step="1"> %</span></label>
+          </div>
+          <label class="check"><input type="checkbox" name="quietOn"> Quiet hours (no drink beeps or drink notifications)</label>
+          <div class="grid2" id="quietRow">
+            <label>From <input name="qs" type="time" step="3600"></label>
+            <label>To <input name="qe" type="time" step="3600"></label>
+          </div>
+          <p id="setMsg" class="note" role="status"></p>
+          <button class="btn primary" type="submit" id="saveSettings">Send to the band</button>
+        </form>
+        <p class="note" id="gThresholds" hidden></p>
+        <p class="note">E-mail alerts for SOS and emergencies go to the ThingSpeak account's e-mail address. Keep this page open (or check it often) for everything else.</p>
+        <button class="btn ghost" type="button" id="notifBtn">Turn on notifications</button>
+        <button class="btn link" id="signOut" type="button">Disconnect from this band</button>
+      </section>
+
+      <p class="fine">HeatGuard is a student project, not a medical device. Wrist readings are approximate. In an emergency, call 112.</p>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="mark" viewBox="0 0 64 64">
+      <rect x="18" y="4" width="28" height="56" rx="10" fill="#1D2A2E"/>
+      <circle cx="32" cy="32" r="10" fill="#F2A33A"/>
+      <circle cx="32" cy="32" r="4.5" fill="#D7362B"/>
+    </symbol>
+  </svg>
+  <script src="js/logic.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
