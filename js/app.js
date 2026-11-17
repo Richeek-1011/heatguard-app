@@ -133,11 +133,6 @@
     }
   }
 
-  $('signOut').addEventListener('click', () => {
-    store.del(STORE);
-    if (S.watchId !== undefined) navigator.geolocation.clearWatch(S.watchId);
-    location.href = location.pathname;
-  });
 
   // ---------------- main loop ----------------
   function start() {
@@ -147,9 +142,7 @@
     $('roleTag').textContent = S.role === 'wearer' ? 'Wearer' : 'Guardian';
     $('wearerActions').hidden = S.role !== 'wearer';
     $('guardianActions').hidden = S.role !== 'guardian';
-    $('settingsForm').hidden = S.role !== 'wearer';
-    $('gThresholds').hidden = S.role !== 'guardian';
-    updateNotifButton();
+    $('settingsPanel').hidden = S.role !== 'wearer';
     refresh(true);
     S.timer = setInterval(() => refresh(false), POLL_MS);
     if (S.role === 'wearer') startLocation();
@@ -211,7 +204,8 @@
     }
     const raised = L.esc ? bitsText(ESC, L.esc) : [];
     $('riskWhy').textContent = raised.length ? `Raised one level: ${raised.join(', ')}.` : '';
-    $('riskAir').textContent = L.ta !== undefined ? `Air ${fmt(L.ta)} °C, humidity ${fmt(L.rh, 0)} %. Measured ${ago(t - L.ts)}.` : '';
+    $('riskAir').textContent = L.ta !== undefined
+      ? `Air ${fmt(L.ta)} °C, humidity ${fmt(L.rh, 0)} %. Measured ${ago(t - L.ts)}.` : '';
 
     const s = S.settings;
     $('vSkin').textContent = fmt(L.sk);
@@ -257,9 +251,6 @@
 
     renderEvents();
     renderExposure();
-    if (S.role === 'guardian') {
-      $('gThresholds').textContent = `Thresholds on the band: heat index amber at ${s.hiA} °C, red above ${s.hiR} °C; skin warning ${s.sk} °C, emergency ${s.skE} °C; heart rate above ${s.hr} bpm; SpO2 below ${s.sp} %.`;
-    }
     $('setSource').textContent = s.known
       ? `These are the values the band reported at ${clock(s.at)}.`
       : 'The band has not reported its settings yet, so these are the defaults.';
@@ -443,7 +434,7 @@
       const acks = store.get(ACKS) || [];
       acks.push(Number(id));
       store.set(ACKS, acks.slice(-200));
-      toast('Marked as seen. The band beeps within 20 s so the wearer knows.');
+      toast('Marked as seen.');
       render();
     } catch (e) { toast(e.message); if (btn) btn.disabled = false; }
   }
@@ -478,15 +469,6 @@
     } catch { /* the toast was shown */ }
   }
 
-  function updateNotifButton() {
-    const b = $('notifBtn');
-    b.hidden = !('Notification' in window) || Notification.permission === 'granted';
-    b.onclick = async () => {
-      const p = await Notification.requestPermission();
-      toast(p === 'granted' ? 'Notifications are on while this app is open.' : 'Notifications are blocked in your browser settings.');
-      updateNotifButton();
-    };
-  }
 
   // ---------------- wearer: location, SOS, commands ----------------
   function startLocation() {
@@ -544,7 +526,6 @@
     if (loc) { p.lat = loc.lat.toFixed(6); p.long = loc.lon.toFixed(6); }
     let ok = false;
     try { ok = await writeEvent(p); } catch { ok = false; }
-    talkback('FIND').catch(() => {});
     const msg = ok
       ? `SOS sent at ${clock(nowS())}${loc ? ' with your location' : ''}. Your guardian's app shows it now; the e-mail follows.`
       : 'SOS was NOT sent: no connection to ThingSpeak. Call 112 or your guardian directly.';
@@ -579,7 +560,6 @@
   });
   $('readBtn').addEventListener('click', (e) => command('VITALS', 'The band starts a 20 s reading within 20 s. Keep still with your finger on the sensor.', e.currentTarget));
   $('gReadBtn').addEventListener('click', (e) => command('VITALS', 'Asked the band for a new reading. It shows up in about a minute.', e.currentTarget));
-  $('findBtn').addEventListener('click', (e) => command('FIND', 'The band beeps within 20 s.', e.currentTarget));
 
   // ---------------- settings ----------------
   const hhmm = (h) => (h < 0 ? '' : `${String(h).padStart(2, '0')}:00`);
@@ -607,7 +587,7 @@
     $('saveSettings').disabled = true;
     try {
       await talkback(HG.cfgCommand(s));
-      msg.textContent = 'Sent. The band applies them within about 20 s when it is online, beeps once, and this page then shows the new values.';
+      msg.textContent = 'Sent. The band applies them within about 20 s when it is online, and this page then shows the new values.';
     } catch (e) { msg.textContent = `Not sent: ${e.message}.`; }
     $('saveSettings').disabled = false;
   });

@@ -127,10 +127,7 @@
 
       <!-- guardian actions -->
       <section id="guardianActions" class="actions" hidden>
-        <div class="row2">
-          <button id="gReadBtn" class="btn">Ask for a reading</button>
-          <button id="findBtn" class="btn ghost">Beep the band</button>
-        </div>
+        <button id="gReadBtn" class="btn full">Ask for a reading</button>
         <a id="gMap" class="maplink" target="_blank" rel="noopener" hidden>Wearer's phone on the map</a>
         <p id="gSilenceNote" class="note" hidden></p>
       </section>
@@ -178,7 +175,7 @@
             <label>Resting heart rate above <span class="unit-in"><input name="hr" type="number" step="1"> bpm</span></label>
             <label>SpO2 below <span class="unit-in"><input name="sp" type="number" step="1"> %</span></label>
           </div>
-          <label class="check"><input type="checkbox" name="quietOn"> Quiet hours (no drink beeps or drink notifications)</label>
+          <label class="check"><input type="checkbox" name="quietOn"> Quiet hours (no drink reminders on the phone)</label>
           <div class="grid2" id="quietRow">
             <label>From <input name="qs" type="time" step="3600"></label>
             <label>To <input name="qe" type="time" step="3600"></label>
@@ -186,13 +183,8 @@
           <p id="setMsg" class="note" role="status"></p>
           <button class="btn primary" type="submit" id="saveSettings">Send to the band</button>
         </form>
-        <p class="note" id="gThresholds" hidden></p>
-        <p class="note">E-mail alerts for SOS and emergencies go to the ThingSpeak account's e-mail address. Keep this page open (or check it often) for everything else.</p>
-        <button class="btn ghost" type="button" id="notifBtn">Turn on notifications</button>
-        <button class="btn link" id="signOut" type="button">Disconnect from this band</button>
       </section>
 
-      <p class="fine">HeatGuard is a student project, not a medical device. Wrist readings are approximate. In an emergency, call 112.</p>
     </main>
   </div>
 

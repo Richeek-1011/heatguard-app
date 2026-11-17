@@ -215,3 +215,5 @@ a { color: inherit; }
 .links label { display: grid; gap: 5px; font-size: .9rem; font-weight: 600; }
 a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 #settingsPanel > .btn { margin-top: 10px; }
+
+.btn.full { width: 100%; }
